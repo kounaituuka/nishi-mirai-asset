@@ -1,0 +1,1901 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>西高ミライ資産 — クラスコインシミュレーション</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f7f5f0;--surface:#fff;--surface2:#f0ede6;--border:#e2ddd4;
+  --text:#1a1814;--text2:#6b6560;--text3:#9e9890;
+  --green:#1a7a4a;--green-bg:#e8f5ee;--red:#c0392b;--red-bg:#fdecea;
+  --accent:#2d4a8a;--accent-bg:#eef1f9;--purple:#7c3aed;--purple-bg:#f3f0ff;
+  --mono:'Space Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.header{background:var(--surface);border-bottom:1.5px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.header-logo{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:-.02em;color:var(--text);display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+.logo-dot.closed{background:var(--red);animation:none}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+.role-toggle{display:flex;border:1.5px solid var(--border);border-radius:8px;overflow:hidden}
+.role-btn{padding:7px 18px;font-size:13px;font-family:var(--sans);background:none;border:none;cursor:pointer;color:var(--text2);transition:all .15s}
+.role-btn.active{background:var(--text);color:#fff;font-weight:500}
+.time-display{font-family:var(--mono);font-size:13px;color:var(--text3)}
+.market-banner{display:none;align-items:center;justify-content:center;gap:10px;padding:10px 20px;background:var(--red-bg);border-bottom:1.5px solid #f5c5c0;font-size:13px;font-weight:500;color:var(--red)}
+.market-banner.visible{display:flex}
+.container{max-width:980px;margin:0 auto;padding:24px 20px}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px}
+.metric-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px}
+.metric-label{font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:6px}
+.metric-value{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text)}
+.metric-value.up{color:var(--green)}.metric-value.down{color:var(--red)}
+.tabs{display:flex;border-bottom:1.5px solid var(--border);margin-bottom:20px;flex-wrap:wrap}
+.tab{padding:10px 18px;font-size:13px;font-family:var(--sans);font-weight:500;background:none;border:none;border-bottom:2.5px solid transparent;margin-bottom:-1.5px;cursor:pointer;color:var(--text2);transition:all .15s}
+.tab.active{color:var(--text);border-bottom-color:var(--text)}
+.market-layout{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media(max-width:700px){.market-layout{grid-template-columns:1fr}}
+.stock-grid{display:flex;flex-direction:column;gap:10px}
+.stock-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:14px;transition:border-color .15s}
+.stock-card:hover{border-color:#c8c2b8}
+.stock-badge{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:13px;font-weight:700;flex-shrink:0}
+.stock-info{flex:1;min-width:0}
+.stock-name{font-size:14px;font-weight:500;margin-bottom:2px}
+.stock-sub{font-size:12px;color:var(--text3)}
+.stock-trade{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.qty-input{width:60px;padding:5px 8px;font-size:13px;font-family:var(--mono);border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:center}
+.qty-input:focus{outline:none;border-color:var(--accent)}
+.buy-btn,.sell-btn{padding:5px 12px;font-size:13px;font-family:var(--sans);font-weight:500;border-radius:6px;cursor:pointer;transition:all .12s;border:1.5px solid}
+.buy-btn{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.buy-btn:hover{background:var(--green);color:#fff}
+.sell-btn{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.sell-btn:hover{background:var(--red);color:#fff}
+.buy-btn:disabled,.sell-btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.stock-price-block{text-align:right;flex-shrink:0}
+.stock-price{font-family:var(--mono);font-size:17px;font-weight:700}
+.stock-change{font-family:var(--mono);font-size:11px;margin-top:3px}
+.up{color:var(--green)}.down{color:var(--red)}
+.bulk-side{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:16px;align-self:start;position:sticky;top:72px}
+.bulk-side-title{font-size:12px;font-weight:500;letter-spacing:.05em;color:var(--text2);text-transform:uppercase;margin-bottom:12px}
+.bulk-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.bulk-row{display:flex;align-items:center;gap:8px}
+.bulk-check{width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:var(--accent)}
+.bulk-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;flex-shrink:0}
+.bulk-name{flex:1;font-size:13px}
+.bulk-qty{width:54px;padding:4px 6px;font-size:13px;font-family:var(--mono);border:1.5px solid var(--border);border-radius:5px;background:var(--bg);color:var(--text);text-align:center}
+.bulk-qty:focus{outline:none;border-color:var(--accent)}
+.bulk-held{font-size:11px;color:var(--text3);width:40px;text-align:right;flex-shrink:0}
+.bulk-summary{font-size:12px;color:var(--text2);margin-bottom:10px;min-height:16px}
+.bulk-actions{display:flex;gap:8px}
+.bulk-buy-btn,.bulk-sell-btn{flex:1;padding:7px;font-size:13px;font-family:var(--sans);font-weight:700;border-radius:7px;cursor:pointer;transition:all .12s;border:1.5px solid}
+.bulk-buy-btn{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.bulk-buy-btn:hover{background:var(--green);color:#fff}
+.bulk-sell-btn{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.bulk-sell-btn:hover{background:var(--red);color:#fff}
+.bulk-buy-btn:disabled,.bulk-sell-btn:disabled{opacity:.35;cursor:not-allowed;pointer-events:none}
+.chart-section{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:20px}
+.chart-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.chart-title{font-size:14px;font-weight:500}
+.chart-filter{display:flex;gap:6px;flex-wrap:wrap}
+.chart-filter-btn{padding:4px 12px;font-size:12px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:20px;background:none;cursor:pointer;color:var(--text2);transition:all .12s}
+.chart-filter-btn.active{background:var(--text);color:#fff;border-color:var(--text)}
+.chart-wrap{position:relative;height:280px}
+.portfolio-table{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:hidden}
+.portfolio-row{display:flex;align-items:center;gap:14px;padding:12px 18px;border-bottom:1px solid var(--border);transition:background .1s}
+.portfolio-row:last-child{border-bottom:none}
+.portfolio-row:hover{background:var(--surface2)}
+.ranking-list{display:flex;flex-direction:column;gap:8px}
+.rank-row{display:flex;align-items:center;gap:14px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:12px 18px}
+.rank-num{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--text3);width:30px}
+.rank-num.gold{color:#c8952a}.rank-num.silver{color:#888}.rank-num.bronze{color:#a0714a}
+.rank-bar-wrap{flex:1}
+.rank-bar-track{height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;margin-top:6px}
+.rank-bar-fill{height:100%;border-radius:4px;transition:width .6s ease}
+.teacher-section{margin-bottom:16px}
+.market-control{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:18px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.market-status-label{font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:5px}
+.market-status-value{font-size:17px;font-weight:700;display:flex;align-items:center;gap:8px}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.status-dot.open{background:var(--green);animation:pulse 2s infinite}
+.status-dot.closed{background:var(--red);animation:none}
+.market-toggle-btn{padding:9px 22px;font-size:14px;font-family:var(--sans);font-weight:700;border-radius:8px;cursor:pointer;border:none;transition:opacity .15s;flex-shrink:0}
+.market-toggle-btn.open{background:var(--red);color:#fff}
+.market-toggle-btn.closed{background:var(--green);color:#fff}
+.market-toggle-btn:hover{opacity:.85}
+.teacher-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media(max-width:640px){.teacher-grid{grid-template-columns:1fr}}
+.panel-section{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:18px}
+.panel-title{font-size:12px;font-weight:500;color:var(--text2);letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
+.form-group{margin-bottom:12px}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:4px;display:block}
+.form-select,.form-input{width:100%;padding:8px 11px;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);transition:border-color .15s}
+.form-select:focus,.form-input:focus{outline:none;border-color:var(--accent)}
+.impact-row{display:flex;align-items:center;gap:10px}
+.impact-val{font-family:var(--mono);font-size:18px;font-weight:700;width:64px;text-align:center;flex-shrink:0}
+.impact-val.pos{color:var(--green)}.impact-val.neg{color:var(--red)}
+.submit-btn{width:100%;padding:9px;font-size:14px;font-family:var(--sans);font-weight:700;background:var(--text);color:#fff;border:none;border-radius:8px;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.submit-btn:hover{opacity:.85}
+.class-edit-rows{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.class-edit-row{display:flex;align-items:center;gap:8px}
+.class-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.class-name-input{flex:1;padding:6px 9px;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)}
+.class-name-input:focus{outline:none;border-color:var(--accent)}
+.class-sym-input{width:50px;padding:6px 8px;font-size:13px;font-family:var(--mono);font-weight:700;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:center}
+.class-sym-input:focus{outline:none;border-color:var(--accent)}
+.del-btn{width:28px;height:28px;border-radius:6px;border:1.5px solid var(--red);color:var(--red);background:var(--red-bg);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.del-btn:hover{background:var(--red);color:#fff}
+.add-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.add-input{flex:1;min-width:80px;padding:7px 10px;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text)}
+.add-input:focus{outline:none;border-color:var(--accent)}
+.add-sym-input{width:52px;padding:7px 8px;font-size:13px;font-family:var(--mono);font-weight:700;border:1.5px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text);text-align:center}
+.add-sym-input:focus{outline:none;border-color:var(--accent)}
+.add-btn{padding:7px 14px;font-size:13px;font-family:var(--sans);font-weight:700;border:1.5px solid var(--accent);border-radius:7px;background:var(--accent-bg);color:var(--accent);cursor:pointer;transition:all .12s;white-space:nowrap}
+.add-btn:hover{background:var(--accent);color:#fff}
+.preset-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:280px;overflow-y:auto}
+.preset-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:10px 12px}
+.preset-info{flex:1;min-width:0}
+.preset-name{font-size:13px;font-weight:500;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.preset-meta{font-size:11px;color:var(--text3)}
+.preset-use-btn{padding:4px 10px;font-size:12px;font-family:var(--sans);font-weight:500;border:1.5px solid var(--accent);border-radius:5px;background:var(--accent-bg);color:var(--accent);cursor:pointer;transition:all .12s;flex-shrink:0}
+.preset-use-btn:hover{background:var(--accent);color:#fff}
+.preset-del-btn{width:26px;height:26px;border-radius:5px;border:1.5px solid var(--border);color:var(--text3);background:none;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.preset-del-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+.preset-add-form{border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+.preset-add-row{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.rank-impact-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.rank-impact-row{display:flex;align-items:center;gap:10px}
+.rank-impact-label{font-size:13px;font-weight:500;width:52px;flex-shrink:0}
+.rank-impact-input{width:68px;padding:6px 9px;font-size:13px;font-family:var(--mono);border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);text-align:center}
+.rank-impact-input:focus{outline:none;border-color:var(--accent)}
+.rank-assign-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rank-assign-label{font-size:13px;font-weight:500;width:52px;flex-shrink:0}
+.rank-assign-select{flex:1;padding:5px 8px;font-size:13px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text)}
+.rank-assign-select:focus{outline:none;border-color:var(--accent)}
+.event-log{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto}
+.event-item{background:var(--surface2);border-radius:8px;padding:10px 14px;border-left:3px solid var(--border);animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.event-item.pos-event{border-left-color:var(--green)}
+.event-item.neg-event{border-left-color:var(--red)}
+.event-item.market-event{border-left-color:var(--accent)}
+.event-item.all-event{border-left-color:#9b59b6}
+.event-class{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:2px}
+.event-comment{font-size:13px}
+.event-delta{font-family:var(--mono);font-size:12px;margin-top:3px}
+.event-time{font-size:11px;color:var(--text3);float:right}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 22px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .25s;pointer-events:none;z-index:9999;white-space:nowrap}
+#toast.show{opacity:1}
+.empty-state{text-align:center;padding:36px 20px;color:var(--text3);font-size:14px}
+.survey-card{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px}
+.survey-option{display:flex;align-items:center;gap:10px;padding:12px 14px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;margin-bottom:8px;transition:all .15s;background:var(--bg);user-select:none}
+.survey-option:hover{border-color:var(--accent);background:var(--accent-bg)}
+.survey-option.selected{border-color:var(--accent);background:var(--accent-bg)}
+.result-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.result-bar-track{flex:1;height:18px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.result-bar-fill{height:100%;border-radius:4px;background:var(--accent);transition:width .5s ease}
+.result-bar-count{font-family:var(--mono);font-size:12px;width:36px;text-align:right;flex-shrink:0;color:var(--text2)}
+.survey-panel-item{background:var(--surface2);border-radius:10px;padding:14px;margin-bottom:10px;border:1.5px solid var(--border)}
+.survey-panel-item.active{border-color:var(--accent)}
+
+
+.auth-screen{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;overflow-y:auto;align-items:center;justify-content:center}
+.auth-screen.visible{display:flex}
+.auth-wrap{width:100%;max-width:420px;margin:auto;padding:32px 20px}
+.auth-logo{text-align:center;margin-bottom:32px}
+.auth-logo-mark{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--text)}
+.auth-logo-dot{width:10px;height:10px;background:var(--accent);border-radius:50%;animation:pulse 2s infinite}
+.auth-logo-sub{font-size:12px;color:var(--text3);margin-top:6px;font-family:var(--sans)}
+.auth-card{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:28px 28px 24px;box-shadow:0 2px 16px rgba(0,0,0,.06)}
+.auth-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px}
+.auth-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.role-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
+.role-card{border:2px solid var(--border);border-radius:10px;padding:14px 12px;cursor:pointer;transition:all .15s;text-align:center;background:var(--bg)}
+.role-card:hover{border-color:#b8b2a8}
+.role-card.selected{border-color:var(--accent);background:var(--accent-bg)}
+.role-card-icon{font-size:26px;margin-bottom:6px}
+.role-card-label{font-size:13px;font-weight:700;color:var(--text)}
+.role-card-desc{font-size:11px;color:var(--text3);margin-top:2px}
+.role-card.selected .role-card-label{color:var(--accent)}
+.auth-field{margin-bottom:16px}
+.auth-label{font-size:12px;font-weight:500;color:var(--text2);margin-bottom:5px;display:block}
+.auth-input{width:100%;padding:10px 13px;font-size:14px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);transition:border-color .15s;outline:none}
+.auth-input:focus{border-color:var(--accent)}
+.auth-input.err{border-color:var(--red)}
+.auth-error{font-size:12px;color:var(--red);margin-top:4px;display:none}
+.auth-error.visible{display:block}
+.auth-submit{width:100%;padding:11px;font-size:15px;font-family:var(--sans);font-weight:700;background:var(--accent);color:#fff;border:none;border-radius:9px;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.auth-submit:hover{opacity:.88}
+.auth-divider{text-align:center;margin:18px 0;color:var(--text3);font-size:12px;position:relative}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:var(--border)}
+.auth-divider::before{left:0}.auth-divider::after{right:0}
+.auth-link{text-align:center;font-size:13px;color:var(--text2);margin-top:4px}
+.auth-link a{color:var(--accent);text-decoration:none;font-weight:500;cursor:pointer}
+.auth-link a:hover{text-decoration:underline}
+.pw-strength{margin-top:6px;display:flex;gap:4px;align-items:center}
+.pw-bar{height:4px;flex:1;border-radius:2px;background:var(--border);transition:background .3s}
+.pw-bar.weak{background:#e24b4a}.pw-bar.ok{background:#f0a500}.pw-bar.strong{background:var(--green)}
+.pw-label{font-size:11px;color:var(--text3);width:36px;text-align:right;flex-shrink:0}
+.user-badge{display:none;align-items:center;gap:8px;font-size:13px;color:var(--text2)}
+.user-badge.visible{display:flex}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--accent-bg);border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--accent);flex-shrink:0}
+.logout-btn{padding:4px 10px;font-size:12px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:6px;background:none;color:var(--text2);cursor:pointer;transition:all .12s}
+.logout-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+</style>
+</head>
+<body>
+
+<!-- ===== トップ選択画面 ===== -->
+<div class="auth-screen visible" id="top-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark"><div class="auth-logo-dot"></div>西高ミライ資産</div>
+      <div class="auth-logo-sub">クラスコインシミュレーション</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-title">どちらに進みますか？</div>
+      <div class="auth-sub" style="margin-bottom:24px">機能を選んでください</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button onclick="goToSurvey()" style="padding:18px;font-size:15px;font-family:var(--sans);font-weight:700;background:var(--purple-bg);color:var(--purple);border:2px solid var(--purple);border-radius:12px;cursor:pointer;transition:all .15s;text-align:left;display:flex;align-items:center;gap:14px">
+          <span style="font-size:28px">📋</span>
+          <div><div>アンケート</div><div style="font-size:12px;font-weight:400;margin-top:3px;opacity:.7">全クラスで共通のアンケートに回答・管理する</div></div>
+        </button>
+        <button onclick="goToMarket()" style="padding:18px;font-size:15px;font-family:var(--sans);font-weight:700;background:var(--accent-bg);color:var(--accent);border:2px solid var(--accent);border-radius:12px;cursor:pointer;transition:all .15s;text-align:left;display:flex;align-items:center;gap:14px">
+          <span style="font-size:28px">📈</span>
+          <div><div>クラスマーケット</div><div style="font-size:12px;font-weight:400;margin-top:3px;opacity:.7">クラスコインの売買・市場管理をする</div></div>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== アンケートログイン画面 ===== -->
+<div class="auth-screen" id="sv-login-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark"><div class="auth-logo-dot"></div>アンケート</div>
+      <div class="auth-logo-sub">西高ミライ資産</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-title">アンケートにログイン</div>
+      <div class="auth-sub">ロールを選んでIDとパスワードを入力してください</div>
+      <div class="role-cards">
+        <div class="role-card selected" id="sv-lrc-student" onclick="svSelectLoginRole('student')">
+          <div class="role-card-icon">🎒</div><div class="role-card-label">生徒</div><div class="role-card-desc">アンケートに回答する</div>
+        </div>
+        <div class="role-card" id="sv-lrc-teacher" onclick="svSelectLoginRole('teacher')">
+          <div class="role-card-icon">📋</div><div class="role-card-label">先生</div><div class="role-card-desc">アンケートを作成・管理する</div>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-login-id">ID</label>
+        <input class="auth-input" type="text" id="sv-login-id" placeholder="IDを入力" autocomplete="username">
+        <div class="auth-error" id="sv-login-id-err">IDを入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-login-pw">パスワード</label>
+        <input class="auth-input" type="password" id="sv-login-pw" placeholder="パスワードを入力"
+          onkeydown="if(event.key==='Enter')svDoLogin()">
+        <div class="auth-error" id="sv-login-pw-err">IDまたはパスワードが違います</div>
+      </div>
+      <button class="auth-submit" onclick="svDoLogin()">ログイン</button>
+      <div class="auth-divider">または</div>
+      <div class="auth-link">はじめて使う方は <a onclick="svShowRegister()">アカウントを作成する →</a></div>
+      <div style="margin-top:16px;text-align:center"><a onclick="goToTop()" style="font-size:12px;color:var(--text3);cursor:pointer">← トップに戻る</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== アンケート登録画面 ===== -->
+<div class="auth-screen" id="sv-register-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark"><div class="auth-logo-dot"></div>アンケート</div>
+      <div class="auth-logo-sub">アカウントを作成する</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-title">新規登録</div>
+      <div class="auth-sub">ロールを選んで登録してください</div>
+      <div class="role-cards">
+        <div class="role-card selected" id="sv-rrc-student" onclick="svSelectRegRole('student')">
+          <div class="role-card-icon">🎒</div><div class="role-card-label">生徒</div><div class="role-card-desc">アンケートに回答する</div>
+        </div>
+        <div class="role-card" id="sv-rrc-teacher" onclick="svSelectRegRole('teacher')">
+          <div class="role-card-icon">📋</div><div class="role-card-label">先生</div><div class="role-card-desc">アンケートを作成・管理する</div>
+        </div>
+      </div>
+      <div class="auth-field" id="sv-reg-myclass-wrap">
+        <label class="auth-label" for="sv-reg-myclass">あなたのクラス（生徒のみ）</label>
+        <select class="auth-input" id="sv-reg-myclass">
+          <option value="">クラスを選択してください</option>
+        </select>
+        <div class="auth-error" id="sv-reg-myclass-err">クラスを選択してください</div>
+      </div>
+      <div class="auth-field" id="sv-reg-classcode-wrap">
+        <label class="auth-label" for="sv-reg-classcode">クラスコード（生徒のみ）</label>
+        <input class="auth-input" type="text" id="sv-reg-classcode" placeholder="先生から受け取ったクラスコード（例：20261）">
+        <div class="auth-error" id="sv-reg-classcode-err">クラスコードを入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-reg-id">ID（半角英数字）</label>
+        <input class="auth-input" type="text" id="sv-reg-id" placeholder="使いたいIDを入力">
+        <div class="auth-error" id="sv-reg-id-err">このIDは既に使われています</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-reg-nickname">4桁番号</label>
+        <input class="auth-input" type="text" id="sv-reg-nickname" placeholder="例：1234">
+        <div class="auth-error" id="sv-reg-nickname-err">4桁番号を入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-reg-pw">パスワード（6文字以上）</label>
+        <input class="auth-input" type="password" id="sv-reg-pw" placeholder="パスワードを設定">
+        <div class="auth-error" id="sv-reg-pw-err">パスワードは6文字以上で入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="sv-reg-pw2">パスワード（確認）</label>
+        <input class="auth-input" type="password" id="sv-reg-pw2" placeholder="もう一度入力"
+          onkeydown="if(event.key==='Enter')svDoRegister()">
+        <div class="auth-error" id="sv-reg-pw2-err">パスワードが一致しません</div>
+      </div>
+      <button class="auth-submit" onclick="svDoRegister()">アカウントを作成する</button>
+      <div class="auth-link" style="margin-top:16px">すでにアカウントをお持ちの方は <a onclick="svShowLogin()">ログイン →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== アンケートメイン画面 ===== -->
+<div id="sv-main" style="display:none">
+  <div class="header">
+    <div class="header-logo"><div class="logo-dot"></div>アンケート</div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="user-badge visible" id="sv-user-badge">
+        <div class="user-avatar" id="sv-user-avatar">?</div>
+        <span id="sv-user-name" style="font-size:13px;font-weight:500;color:var(--text)"></span>
+        <button class="logout-btn" onclick="svDoLogout()">ログアウト</button>
+      </div>
+    </div>
+  </div>
+  <div class="container">
+    <div id="sv-student-view"></div>
+    <div id="sv-teacher-view" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ===== ログイン画面 ===== -->
+<div class="auth-screen" id="login-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark"><div class="auth-logo-dot"></div>西高ミライ資産</div>
+      <div class="auth-logo-sub">クラスコインシミュレーション</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-title">ログイン</div>
+      <div class="auth-sub">クラスコードを入力してログインしてください</div>
+      <div class="auth-field">
+        <label class="auth-label" for="login-code">クラスコード</label>
+        <input class="auth-input" type="text" id="login-code" placeholder="クラスコードを入力（例：20261）" autocomplete="off">
+        <div class="auth-error" id="login-code-err">クラスコードが見つかりません</div>
+      </div>
+      <div class="role-cards">
+        <div class="role-card selected" id="lrc-student" onclick="selectLoginRole('student')">
+          <div class="role-card-icon">🎒</div>
+          <div class="role-card-label">生徒</div>
+          <div class="role-card-desc">クラスコインを売買する</div>
+        </div>
+        <div class="role-card" id="lrc-teacher" onclick="selectLoginRole('teacher')">
+          <div class="role-card-icon">📋</div>
+          <div class="role-card-label">先生</div>
+          <div class="role-card-desc">市場・イベントを管理する</div>
+        </div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="login-id">ID</label>
+        <input class="auth-input" type="text" id="login-id" placeholder="登録したIDを入力" autocomplete="username">
+        <div class="auth-error" id="login-id-err">IDを入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="login-pw">パスワード</label>
+        <input class="auth-input" type="password" id="login-pw" placeholder="パスワードを入力" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()">
+        <div class="auth-error" id="login-pw-err">IDまたはパスワードが違います</div>
+      </div>
+      <button class="auth-submit" onclick="doLogin()">ログイン</button>
+      <div class="auth-divider">または</div>
+      <div class="auth-link">はじめて使う方は <a onclick="showRegister()">アカウントを作成する →</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 新規登録画面 ===== -->
+<div class="auth-screen" id="register-screen">
+  <div class="auth-wrap">
+    <div class="auth-logo">
+      <div class="auth-logo-mark"><div class="auth-logo-dot"></div>西高ミライ資産</div>
+      <div class="auth-logo-sub">アカウントを作成する</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-title">新規登録</div>
+      <div class="auth-sub">ロールを選んで登録してください</div>
+      <div class="role-cards">
+        <div class="role-card selected" id="rrc-student" onclick="selectRegisterRole('student')">
+          <div class="role-card-icon">🎒</div>
+          <div class="role-card-label">生徒</div>
+          <div class="role-card-desc">クラスコインを売買する</div>
+        </div>
+        <div class="role-card" id="rrc-teacher" onclick="selectRegisterRole('teacher')">
+          <div class="role-card-icon">📋</div>
+          <div class="role-card-label">先生</div>
+          <div class="role-card-desc">市場・イベントを管理する</div>
+        </div>
+      </div>
+      <!-- 先生：新規クラス名 -->
+      <div class="auth-field" id="reg-classname-wrap" style="display:none">
+        <label class="auth-label" for="reg-classname">クラス名（新規作成）</label>
+        <input class="auth-input" type="text" id="reg-classname" placeholder="例：3年A組 / 2026年度クラス">
+        <div class="auth-error" id="reg-classname-err">クラス名を入力してください</div>
+      </div>
+      <!-- 先生用：年度＋クラス番号でコード生成 -->
+      <div class="auth-field" id="reg-code-teacher-wrap" style="display:none">
+        <label class="auth-label">クラスコード（年度＋クラス番号）</label>
+        <div style="display:flex;align-items:stretch;gap:6px">
+          <div style="flex:2;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;color:var(--text3)">年度</span>
+            <input class="auth-input" type="number" id="reg-code-year" placeholder="2026" min="2000" max="2099"
+              style="margin:0" oninput="updateTeacherCodePreview()">
+          </div>
+          <div style="display:flex;align-items:flex-end;padding-bottom:10px;color:var(--text3);font-size:20px;font-weight:300;flex-shrink:0">+</div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:11px;color:var(--text3)">クラス番号</span>
+            <input class="auth-input" type="number" id="reg-code-class" placeholder="1" min="1" max="99"
+              style="margin:0" oninput="updateTeacherCodePreview()">
+          </div>
+        </div>
+        <div style="margin-top:8px;padding:10px 14px;background:var(--surface);border:1.5px solid var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;color:var(--text2)">生成されるクラスコード</span>
+          <span id="teacher-code-preview" style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);letter-spacing:.08em">——</span>
+        </div>
+        <div class="auth-error" id="reg-code-err">このコードは既に使われています</div>
+      </div>
+      <!-- 生徒用：1欄でコード入力 -->
+      <div class="auth-field" id="reg-code-student-wrap">
+        <label class="auth-label" for="reg-code-student">クラスコード（参加）</label>
+        <input class="auth-input" type="text" id="reg-code-student" placeholder="先生から受け取ったコードを入力" autocomplete="off">
+        <div class="auth-error" id="reg-code-student-err">クラスコードが見つかりません</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="reg-id">ID（半角英数字・ログインに使用）</label>
+        <input class="auth-input" type="text" id="reg-id" placeholder="使いたいIDを入力" autocomplete="username">
+        <div class="auth-error" id="reg-id-err">このIDは既に使われています</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="reg-nickname">4桁番号（アプリ内の表示名）</label>
+        <input class="auth-input" type="text" id="reg-nickname" placeholder="例：1234">
+        <div class="auth-error" id="reg-nickname-err">4桁番号を入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="reg-pw">パスワード（6文字以上）</label>
+        <input class="auth-input" type="password" id="reg-pw" placeholder="パスワードを設定" autocomplete="new-password"
+          oninput="checkPwStrength(this.value)">
+        <div class="pw-strength" id="pw-strength">
+          <div class="pw-bar" id="pws-1"></div>
+          <div class="pw-bar" id="pws-2"></div>
+          <div class="pw-bar" id="pws-3"></div>
+          <div class="pw-label" id="pws-label"></div>
+        </div>
+        <div class="auth-error" id="reg-pw-err">パスワードは6文字以上で入力してください</div>
+      </div>
+      <div class="auth-field">
+        <label class="auth-label" for="reg-pw2">パスワード（確認）</label>
+        <input class="auth-input" type="password" id="reg-pw2" placeholder="もう一度入力" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')doRegister()">
+        <div class="auth-error" id="reg-pw2-err">パスワードが一致しません</div>
+      </div>
+      <button class="auth-submit" onclick="doRegister()">アカウントを作成する</button>
+      <div class="auth-link" style="margin-top:16px">すでにアカウントをお持ちの方は <a onclick="showLogin()">ログイン →</a></div>
+    </div>
+  </div>
+</div>
+
+<div class="header">
+  <div class="header-logo">
+    <div class="logo-dot" id="logo-dot"></div>
+    西高ミライ資産
+  </div>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="role-toggle" id="role-toggle-wrap">
+      <button class="role-btn active" id="btn-student" onclick="setRole('student')">生徒</button>
+      <button class="role-btn" id="btn-teacher" onclick="setRole('teacher')">先生</button>
+    </div>
+    <div class="user-badge visible" id="user-badge">
+      <div class="user-avatar" id="user-avatar">?</div>
+      <span id="user-name-disp" style="font-size:13px;font-weight:500;color:var(--text)"></span>
+      <button class="logout-btn" onclick="doLogout()">ログアウト</button>
+    </div>
+  </div>
+  <div class="time-display" id="clock"></div>
+</div>
+<div class="market-banner" id="market-banner">
+  ⚠ 市場は現在閉鎖中です。先生が開くまで売買できません。
+</div>
+
+<div class="container">
+  <div id="student-view">
+    <div class="metrics">
+      <div class="metric-card"><div class="metric-label">スクールマネー</div><div class="metric-value" id="cash-disp">10,000 WEN</div></div>
+      <div class="metric-card"><div class="metric-label">総スクールマネー</div><div class="metric-value" id="total-disp">10,000 WEN</div></div>
+      <div class="metric-card"><div class="metric-label">損益</div><div class="metric-value" id="pnl-disp">±0 WEN</div></div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('market')">市場</button>
+      <button class="tab" onclick="showTab('chart')">チャート</button>
+      <button class="tab" onclick="showTab('portfolio')">ポートフォリオ</button>
+      <button class="tab" onclick="showTab('ranking')">ランキング</button>
+    </div>
+    <div id="tab-market">
+      <div class="market-layout">
+        <div class="stock-grid" id="stock-list"></div>
+        <div class="bulk-side">
+          <div class="bulk-side-title">一括売買</div>
+          <div class="bulk-rows" id="bulk-rows"></div>
+          <div class="bulk-summary" id="bulk-summary"></div>
+          <div class="bulk-actions">
+            <button class="bulk-buy-btn" id="bulk-buy-btn" onclick="bulkTrade(1)">まとめて購入</button>
+            <button class="bulk-sell-btn" id="bulk-sell-btn" onclick="bulkTrade(-1)">まとめて売却</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="tab-chart" style="display:none">
+      <div class="chart-section" style="margin-bottom:16px">
+        <div class="chart-header">
+          <div class="chart-title">クラスコイン価格推移</div>
+          <div class="chart-filter" id="chart-filter"></div>
+        </div>
+        <div class="chart-wrap"><canvas id="priceChart"></canvas></div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-header">
+          <div class="chart-title">クラスコイン価格ランキング</div>
+        </div>
+        <div class="ranking-list" id="class-coin-ranking-list"></div>
+      </div>
+    </div>
+    <div id="tab-portfolio" style="display:none">
+      <div class="portfolio-table" id="portfolio-list"></div>
+    </div>
+    <div id="tab-ranking" style="display:none">
+      <div class="chart-section">
+        <div class="chart-header" style="margin-bottom:0">
+          <div class="chart-title">🏆 生徒 総資産ランキング（上位10名）</div>
+          <button onclick="renderStudentRanking()" style="padding:4px 12px;font-size:12px;font-family:var(--sans);border:1.5px solid var(--border);border-radius:20px;background:none;cursor:pointer;color:var(--text2)">更新</button>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin:8px 0 16px">同じクラスの生徒の総資産ランキングです</div>
+        <div class="ranking-list" id="student-ranking-list"></div>
+      </div>
+    </div>
+    </div>
+  </div>
+
+  <div id="teacher-view" style="display:none">
+    <div class="market-control teacher-section">
+      <div style="flex:1">
+        <div class="market-status-label">市場ステータス</div>
+        <div class="market-status-value">
+          <div class="status-dot open" id="status-dot"></div>
+          <span id="status-label">開場中 — 売買可能</span>
+        </div>
+      </div>
+      <button class="market-toggle-btn open" id="market-toggle-btn" onclick="toggleMarket()">市場を閉鎖する</button>
+    </div>
+
+
+    <div>
+      <div class="panel-section" style="margin-bottom:16px">
+        <div class="panel-title">クラスを管理する</div>
+        <div class="class-edit-rows" id="class-edit-rows"></div>
+        <button class="submit-btn" style="margin-bottom:12px" onclick="applyClassEdit()">名前・略称を更新する</button>
+        <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;letter-spacing:.04em;text-transform:uppercase">クラスを追加する</div>
+        <div class="add-row">
+          <input class="add-input" type="text" id="new-class-name" placeholder="クラス名（例：3年B組）">
+          <input class="add-sym-input" type="text" id="new-class-sym" placeholder="略称" maxlength="3">
+          <button class="add-btn" onclick="addClass()">+ 追加</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section" style="margin-bottom:16px">
+        <div class="panel-title">全クラス一斉イベント</div>
+        <div class="form-group">
+          <label class="form-label">イベント名</label>
+          <div style="display:flex;gap:8px">
+            <input class="form-input" type="text" id="all-ev-name" placeholder="例：体育祭 最終結果" style="flex:1">
+            <select class="form-select" id="all-ev-preset" onchange="applyAllPreset()" style="width:auto;flex-shrink:0;padding:8px 10px">
+              <option value="">プリセット</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">順位ごとの変動額（WEN、10刻み）</label>
+          <div class="rank-impact-grid" id="rank-impact-grid"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">各クラスの順位</label>
+          <div id="rank-assign-rows"></div>
+        </div>
+        <button class="submit-btn" style="background:#16a085;margin-bottom:8px" onclick="loadSurveyIntoEvent()">
+  📋 アンケート結果を読み込む（順位を自動入力）
+</button>
+<button class="submit-btn" style="background:#9b59b6" onclick="applyAllEvent()">▶ 全クラスに一斉適用</button>
+        <div style="margin-top:20px">
+          <div class="panel-title">イベント履歴</div>
+          <div class="event-log" id="event-log"><div class="empty-state">まだイベントはありません</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const PALETTE = [
+  {color:"#deeeff",text:"#1a3f7a",chartColor:"#378ADD"},
+  {color:"#dcf5e8",text:"#1a5c38",chartColor:"#1D9E75"},
+  {color:"#feeadf",text:"#8a3010",chartColor:"#D85A30"},
+  {color:"#fce8f0",text:"#7a2050",chartColor:"#D4537E"},
+  {color:"#fef3dc",text:"#7a4a08",chartColor:"#BA7517"},
+  {color:"#f0eaff",text:"#4a1a8a",chartColor:"#7C3AED"},
+  {color:"#e8f8ff",text:"#0a5070",chartColor:"#0EA5E9"},
+  {color:"#fff0e8",text:"#7a3000",chartColor:"#EA580C"},
+];
+
+const DEFAULT_STOCKS = [
+  {name:"1年A組",symbol:"1A",...PALETTE[0]},
+  {name:"1年B組",symbol:"1B",...PALETTE[1]},
+  {name:"2年A組",symbol:"2A",...PALETTE[2]},
+  {name:"2年B組",symbol:"2B",...PALETTE[3]},
+  {name:"3年A組",symbol:"3A",...PALETTE[4]},
+];
+const DEFAULT_PRESETS = [
+  {name:"体育祭",impact:15},{name:"文化祭",impact:10},
+  {name:"テスト好成績",impact:20},{name:"テスト不振",impact:-15},
+  {name:"表彰・受賞",impact:25},{name:"問題行動",impact:-20},
+];
+
+// --- クラス（グループ）管理 ---
+let classes = JSON.parse(localStorage.getItem('sm_classes') || '[]');
+let currentClassId = null;
+function saveClasses(){ localStorage.setItem('sm_classes', JSON.stringify(classes)); }
+function findClassByCode(code){ return classes.find(c=>c.code===code.trim()); }
+
+// --- 先生データ（クラスごと・全生徒で共有） ---
+function teacherStateKey(){ return 'sm_teacher_state_' + (currentClassId||'default'); }
+function loadTeacherState(){
+  const raw = localStorage.getItem(teacherStateKey());
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch(e){ return null; }
+}
+
+function saveTeacherState(){
+  const state = {
+    stocks: stocks.map(s=>({...s})),
+    presets,
+    marketOpen,
+    eventLog: eventLog.slice(0,50),
+    rankImpacts,
+    rankAssign
+  };
+  localStorage.setItem(teacherStateKey(), JSON.stringify(state));
+}
+
+// --- 生徒データ（クラスごと・ログインユーザーごと個別） ---
+function studentKey(userId){ return 'sm_student_'+(currentClassId||'default')+'_'+userId; }
+function loadStudentState(userId){
+  const raw = localStorage.getItem(studentKey(userId));
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch(e){ return null; }
+}
+function saveStudentState(){
+  if(!currentUser || currentUser.role!=='student') return;
+  const state = { cash, holdings };
+  localStorage.setItem(studentKey(currentUser.id), JSON.stringify(state));
+}
+
+function initTeacherState(){
+  const saved = loadTeacherState();
+  if(saved){
+    stocks = (saved.stocks||[]).map((s,i)=>{
+      const base = PALETTE[i%PALETTE.length];
+      return {...base,...s, history: s.history||[{t:now2(),v:s.price}]};
+    });
+    presets = saved.presets || [...DEFAULT_PRESETS];
+    marketOpen = saved.marketOpen ?? true;
+    eventLog = saved.eventLog || [];
+    rankImpacts = saved.rankImpacts || stocks.map((_,i)=>i===0?20:i===1?10:i===2?0:i===3?-10:-20);
+    rankAssign = saved.rankAssign || stocks.map((_,i)=>i);
+  } else {
+    stocks = DEFAULT_STOCKS.map(c=>({...c,price:100,prev:100,history:[],_avgCost:0}));
+    stocks.forEach(s=>{s.prev=s.price;s.history.push({t:now2(),v:s.price});});
+    presets = [...DEFAULT_PRESETS];
+    marketOpen = true;
+    eventLog = [];
+    rankImpacts = [20,10,0,-10,-20];
+    rankAssign = [0,1,2,3,4];
+  }
+}
+function initStudentState(userId){
+  const saved = loadStudentState(userId);
+  if(saved){
+    cash = saved.cash ?? 10000;
+    holdings = saved.holdings ?? {};
+    Object.keys(holdings).forEach(k=>{ if(parseInt(k)>=stocks.length) delete holdings[k]; });
+  } else {
+    cash = 10000;
+    holdings = {};
+  }
+}
+
+let stocks = [];
+let presets = [];
+let cash = 10000;
+let holdings = {};
+let eventLog = [];
+let role = 'student';
+let activeTab = 'market';
+let marketOpen = true;
+let priceChart = null;
+let chartVisibleIdx = new Set();
+let rankImpacts = [20,10,0,-10,-20];
+let rankAssign = [0,1,2,3,4];
+
+initTeacherState();
+
+function now2(){return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'})}
+function wen(n){return Math.round(n).toLocaleString()+' WEN'}
+
+setInterval(()=>{document.getElementById('clock').textContent=new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})},1000);
+
+function toggleMarket(){
+  marketOpen=!marketOpen;
+  document.getElementById('status-dot').className='status-dot '+(marketOpen?'open':'closed');
+  document.getElementById('status-label').textContent=marketOpen?'開場中 — 売買可能':'閉鎖中 — 売買停止';
+  const btn=document.getElementById('market-toggle-btn');
+  btn.textContent=marketOpen?'市場を閉鎖する':'市場を開場する';
+  btn.className='market-toggle-btn '+(marketOpen?'open':'closed');
+  document.getElementById('logo-dot').className='logo-dot'+(marketOpen?'':' closed');
+  document.getElementById('market-banner').classList.toggle('visible',!marketOpen);
+  eventLog.unshift({isMarketEvent:true,comment:marketOpen?'市場が開場しました':'市場が閉鎖されました',time:now2()});
+  renderEventLog();
+  saveTeacherState();
+  showToast(marketOpen?'市場を開場しました':'市場を閉鎖しました');
+  if(activeTab==='market'){renderStocks();renderBulk();}
+}
+
+function setRole(r){
+  role=r;
+  document.getElementById('btn-student').classList.toggle('active',r==='student');
+  document.getElementById('btn-teacher').classList.toggle('active',r==='teacher');
+  document.getElementById('student-view').style.display=r==='student'?'block':'none';
+  document.getElementById('teacher-view').style.display=r==='teacher'?'block':'none';
+  if(r==='teacher'){renderClassEditor();renderPresetList();renderPresetSelects();renderRankImpactGrid();renderRankAssignRows();renderEvClassSelect();}
+  else renderCurrentTab();
+}
+
+const TAB_IDS=['market','chart','portfolio','ranking'];
+function showTab(t){
+  activeTab=t;
+  TAB_IDS.forEach(x=>document.getElementById('tab-'+x).style.display=x===t?'block':'none');
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',TAB_IDS[i]===t));
+  renderCurrentTab();
+}
+function renderCurrentTab(){
+  if(activeTab==='market'){renderStocks();renderBulk();}
+  else if(activeTab==='chart'){renderChart();renderClassCoinRanking();}
+  else if(activeTab==='portfolio')renderPortfolio();
+  else if(activeTab==='ranking')renderStudentRanking();
+  saveTeacherState();
+}
+
+function calcTotal(){let t=cash;Object.entries(holdings).forEach(([i,q])=>t+=stocks[parseInt(i)].price*q);return t;}
+function renderMetrics(){
+  const total=calcTotal(),pnl=total-10000;
+  document.getElementById('cash-disp').textContent=wen(cash);
+  document.getElementById('total-disp').textContent=wen(total);
+  const pEl=document.getElementById('pnl-disp');
+  pEl.textContent=(pnl>=0?'+':'')+wen(Math.abs(pnl));
+  pEl.className='metric-value'+(pnl>0?' up':pnl<0?' down':'');
+}
+
+function renderStocks(){
+  const el=document.getElementById('stock-list');
+  el.innerHTML='';
+  stocks.forEach((s,i)=>{
+    const change=s.price-s.prev,pct=s.prev>0?((change/s.prev)*100).toFixed(1):'0.0';
+    const held=holdings[i]||0,dis=marketOpen?'':'disabled';
+    const d=document.createElement('div');d.className='stock-card';
+    d.innerHTML=`
+      <div class="stock-badge" style="background:${s.color};color:${s.text}">${s.symbol}</div>
+      <div class="stock-info">
+        <div class="stock-name">${s.name}</div>
+        <div class="stock-sub">保有: ${held}クラスコイン</div>
+        <div class="stock-trade">
+          <input class="qty-input" type="number" min="1" value="1" id="qty-${i}" ${dis}>
+          <button class="buy-btn" onclick="trade(${i},1)" ${dis}>購入</button>
+          <button class="sell-btn" onclick="trade(${i},-1)" ${dis}>売却</button>
+        </div>
+      </div>
+      <div class="stock-price-block">
+        <div class="stock-price">${s.price.toLocaleString()} WEN</div>
+        <div class="stock-change ${change>=0?'up':'down'}">${change>=0?'+':''}${change} (${change>=0?'+':''}${pct}%)</div>
+      </div>`;
+    el.appendChild(d);
+  });
+  renderMetrics();
+}
+function trade(idx,dir){
+  if(!marketOpen){showToast('市場は閉鎖中です');return;}
+  const qty=parseInt(document.getElementById('qty-'+idx)?.value||1);
+  if(isNaN(qty)||qty<1){showToast('数量を入力してください');return;}
+  const s=stocks[idx];
+  if(dir===1){
+    const cost=s.price*qty;if(cost>cash){showToast('スクールマネーが足りません');return;}
+    cash-=cost;const ph=holdings[idx]||0;
+    s._avgCost=((s._avgCost||s.price)*ph+s.price*qty)/(ph+qty);
+    holdings[idx]=ph+qty;showToast(`${s.name}を ${qty}クラスコイン 購入しました`);
+  }else{
+    const held=holdings[idx]||0;if(held<qty){showToast('クラスコインが足りません');return;}
+    cash+=s.price*qty;holdings[idx]=held-qty;showToast(`${s.name}を ${qty}クラスコイン 売却しました`);
+  }
+  renderStocks();renderBulk();
+}
+
+function renderBulk(){
+  const el=document.getElementById('bulk-rows'),dis=marketOpen?'':'disabled';
+  el.innerHTML=stocks.map((s,i)=>`
+    <div class="bulk-row">
+      <input type="checkbox" class="bulk-check" id="bcheck-${i}" onchange="updateBulkSummary()">
+      <div class="bulk-badge" style="background:${s.color};color:${s.text}">${s.symbol}</div>
+      <span class="bulk-name">${s.name}</span>
+      <input class="bulk-qty" type="number" min="1" value="1" id="bqty-${i}" oninput="updateBulkSummary()" ${dis}>
+      <span class="bulk-held">${holdings[i]||0}枚</span>
+    </div>`).join('');
+  document.getElementById('bulk-buy-btn').disabled=!marketOpen;
+  document.getElementById('bulk-sell-btn').disabled=!marketOpen;
+  updateBulkSummary();
+}
+function updateBulkSummary(){
+  let cost=0,count=0;
+  stocks.forEach((_,i)=>{if(document.getElementById('bcheck-'+i)?.checked){const q=parseInt(document.getElementById('bqty-'+i)?.value||1);if(q>0){cost+=stocks[i].price*q;count++;}}});
+  document.getElementById('bulk-summary').textContent=count?`選択 ${count}種 — 購入合計 ${cost.toLocaleString()} WEN`:'';
+}
+function bulkTrade(dir){
+  if(!marketOpen){showToast('市場は閉鎖中です');return;}
+  let done=0,failed=[];
+  stocks.forEach((s,i)=>{
+    if(!document.getElementById('bcheck-'+i)?.checked)return;
+    const qty=parseInt(document.getElementById('bqty-'+i)?.value||1);
+    if(isNaN(qty)||qty<1)return;
+    if(dir===1){
+      const cost=s.price*qty;if(cost>cash){failed.push(s.name);return;}
+      cash-=cost;const ph=holdings[i]||0;s._avgCost=((s._avgCost||s.price)*ph+s.price*qty)/(ph+qty);
+      holdings[i]=ph+qty;done++;
+    }else{
+      const held=holdings[i]||0;if(held<qty){failed.push(s.name);return;}
+      cash+=s.price*qty;holdings[i]=held-qty;done++;
+    }
+  });
+  if(!done&&!failed.length){showToast('クラスを選択してください');return;}
+  showToast(`${done}種類を${dir===1?'購入':'売却'}しました`+(failed.length?` (${failed.join('・')}は失敗)`:''));
+  saveStudentState();
+  renderStocks();renderBulk();
+}
+
+function rebuildChartVisible(){ chartVisibleIdx=new Set(stocks.map((_,i)=>i)); }
+function renderChart(){
+  const filterEl=document.getElementById('chart-filter');
+  filterEl.innerHTML='';
+  stocks.forEach((s,i)=>{
+    const btn=document.createElement('button');
+    btn.className='chart-filter-btn'+(chartVisibleIdx.has(i)?' active':'');
+    btn.textContent=s.name;btn.style.borderColor=chartVisibleIdx.has(i)?s.chartColor:var_border();
+    btn.onclick=()=>toggleChartLine(i,btn,s.chartColor);
+    filterEl.appendChild(btn);
+  });
+  const labels=stocks[0]?.history.map(h=>h.t)||[];
+  const datasets=stocks.map((s,i)=>({
+    label:s.name,data:s.history.map(h=>h.v),
+    borderColor:s.chartColor,backgroundColor:s.chartColor+'22',
+    borderWidth:2,pointRadius:s.history.length<=10?4:2,pointHoverRadius:6,
+    tension:.3,fill:false,hidden:!chartVisibleIdx.has(i)
+  }));
+  if(priceChart){priceChart.data.labels=labels;priceChart.data.datasets=datasets;priceChart.update();return;}
+  const ctx=document.getElementById('priceChart').getContext('2d');
+  priceChart=new Chart(ctx,{type:'line',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:false,
+    interaction:{mode:'index',intersect:false},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y.toLocaleString()} WEN`}}},
+    scales:{
+      x:{grid:{color:'#e2ddd4'},ticks:{font:{family:'Space Mono',size:11},color:'#9e9890'}},
+      y:{grid:{color:'#e2ddd4'},ticks:{font:{family:'Space Mono',size:11},color:'#9e9890',callback:v=>v.toLocaleString()+' WEN'}}
+    }
+  }});
+}
+function var_border(){return getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'#e2ddd4';}
+function toggleChartLine(idx,btn,color){
+  if(chartVisibleIdx.has(idx)){chartVisibleIdx.delete(idx);btn.classList.remove('active');btn.style.borderColor=var_border();}
+  else{chartVisibleIdx.add(idx);btn.classList.add('active');btn.style.borderColor=color;}
+  if(priceChart){priceChart.data.datasets[idx].hidden=!chartVisibleIdx.has(idx);priceChart.update();}
+}
+
+function renderPortfolio(){
+  const el=document.getElementById('portfolio-list');
+  const entries=Object.entries(holdings).filter(([,q])=>q>0);
+  if(!entries.length){el.innerHTML='<div class="empty-state">保有クラスコインなし<br><span style="font-size:12px;margin-top:6px;display:block">「市場」タブで購入しましょう</span></div>';return;}
+  el.innerHTML=entries.map(([i,q])=>{
+    const s=stocks[parseInt(i)],val=s.price*q,pnl=(s.price-(s._avgCost||s.price))*q;
+    return `<div class="portfolio-row">
+      <div class="stock-badge" style="background:${s.color};color:${s.text};width:36px;height:36px;border-radius:8px;font-size:12px">${s.symbol}</div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:500">${s.name}</div>
+      <div style="font-size:12px;color:var(--text3)">${q}クラスコイン × ${s.price.toLocaleString()} WEN</div></div>
+      <div>
+        <div style="font-family:var(--mono);font-size:15px;font-weight:700;text-align:right">${val.toLocaleString()} WEN</div>
+        <div style="font-family:var(--mono);font-size:12px;text-align:right" class="${pnl>=0?'up':'down'}">${pnl>=0?'+':''}${Math.abs(Math.round(pnl)).toLocaleString()} WEN</div>
+      </div></div>`;
+  }).join('');
+}
+
+function renderClassCoinRanking(){
+  const el=document.getElementById('class-coin-ranking-list');
+  if(!el)return;
+  const sorted=[...stocks].sort((a,b)=>b.price-a.price);
+  const max=sorted[0]?.price||1;
+  const rc=['gold','silver','bronze','','','','',''];
+  el.innerHTML=sorted.map((s,rank)=>{
+    const change=s.price-s.prev,pct=s.prev>0?((change/s.prev)*100).toFixed(1):'0.0';
+    const w2=Math.round((s.price/max)*100);
+    return `<div class="rank-row">
+      <div class="rank-num ${rc[rank]||''}">${rank+1}</div>
+      <div class="stock-badge" style="background:${s.color};color:${s.text};width:36px;height:36px;border-radius:8px;flex-shrink:0">${s.symbol}</div>
+      <div class="rank-bar-wrap">
+        <div style="font-size:14px;font-weight:500">${s.name}</div>
+        <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${w2}%;background:${s.text}"></div></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--mono);font-size:16px;font-weight:700">${s.price.toLocaleString()} WEN</div>
+        <div style="font-family:var(--mono);font-size:11px" class="${change>=0?'up':'down'}">${change>=0?'+':''}${change} (${change>=0?'+':''}${pct}%)</div>
+      </div></div>`;
+  }).join('');
+}
+
+// ===== 生徒資産ランキング =====
+function renderStudentRanking(){
+  const el=document.getElementById('student-ranking-list');
+  if(!el)return;
+  // 同クラスの生徒一覧を取得
+  const classStudents=users.filter(u=>u.classId===currentClassId && u.role==='student');
+  if(!classStudents.length){
+    el.innerHTML='<div class="empty-state">まだ生徒が登録されていません</div>';return;
+  }
+  // 各生徒の総資産を計算
+  const entries=classStudents.map(u=>{
+    const saved=loadStudentState(u.id);
+    let total=10000;
+    if(saved){
+      total=saved.cash??10000;
+      Object.entries(saved.holdings||{}).forEach(([i,q])=>{
+        const s=stocks[parseInt(i)];
+        if(s)total+=s.price*q;
+      });
+    }
+    return {nickname:u.nickname||u.id, total, isMe:currentUser&&u.id===currentUser.id&&u.classId===currentUser.classId};
+  }).sort((a,b)=>b.total-a.total).slice(0,10);
+  const max=entries[0]?.total||1;
+  const medals=['🥇','🥈','🥉'];
+  el.innerHTML=entries.map((e,rank)=>{
+    const pnl=e.total-10000;
+    const w=Math.round((e.total/max)*100);
+    const meStyle=e.isMe?'border-color:var(--accent);background:var(--accent-bg);':'';
+    return `<div class="rank-row" style="${meStyle}">
+      <div class="rank-num" style="font-size:${rank<3?'22':'16'}px">${rank<3?medals[rank]:rank+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:${e.isMe?'700':'500'};color:${e.isMe?'var(--accent)':'var(--text)'}">${e.nickname}${e.isMe?' (あなた)':''}</div>
+        <div class="rank-bar-track" style="margin-top:6px"><div class="rank-bar-fill" style="width:${w}%;background:${e.isMe?'var(--accent)':'#888'}"></div></div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-family:var(--mono);font-size:16px;font-weight:700">${e.total.toLocaleString()} WEN</div>
+        <div style="font-family:var(--mono);font-size:11px" class="${pnl>=0?'up':'down'}">${pnl>=0?'+':''}${Math.round(pnl).toLocaleString()} WEN</div>
+      </div></div>`;
+  }).join('');
+}
+
+function renderClassEditor(){
+  document.getElementById('class-edit-rows').innerHTML=stocks.map((s,i)=>`
+    <div class="class-edit-row" id="crow-${i}">
+      <div class="class-color-dot" style="background:${s.text}"></div>
+      <input class="class-name-input" type="text" id="cname-${i}" value="${s.name}" placeholder="クラス名">
+      <input class="class-sym-input" type="text" id="csym-${i}" value="${s.symbol}" maxlength="3" placeholder="略称">
+      <button class="del-btn" title="削除" onclick="deleteClass(${i})">×</button>
+    </div>`).join('');
+}
+function applyClassEdit(){
+  stocks.forEach((s,i)=>{
+    const n=document.getElementById('cname-'+i)?.value.trim();
+    const sym=document.getElementById('csym-'+i)?.value.trim();
+    if(n)s.name=n;if(sym)s.symbol=sym;
+  });
+  refreshAll();showToast('クラス名を更新しました');
+}
+function addClass(){
+  const name=document.getElementById('new-class-name').value.trim();
+  const sym=document.getElementById('new-class-sym').value.trim();
+  if(!name){showToast('クラス名を入力してください');return;}
+  const palette=PALETTE[stocks.length%PALETTE.length];
+  const newStock={name,symbol:sym||name.slice(0,3),...palette,price:100,prev:100,history:[{t:now2(),v:100}],_avgCost:0};
+  stocks.push(newStock);
+  chartVisibleIdx.add(stocks.length-1);
+  rankImpacts.push(0);
+  rankAssign.push(stocks.length-1);
+  document.getElementById('new-class-name').value='';
+  document.getElementById('new-class-sym').value='';
+  refreshAll();showToast(`「${name}」を追加しました`);
+}
+function deleteClass(idx){
+  if(stocks.length<=1){showToast('クラスは最低1つ必要です');return;}
+  const name=stocks[idx].name;
+  delete holdings[idx];
+  const newHoldings={};
+  Object.entries(holdings).forEach(([k,v])=>{
+    const ki=parseInt(k);
+    if(ki<idx)newHoldings[ki]=v;
+    else if(ki>idx)newHoldings[ki-1]=v;
+  });
+  Object.keys(holdings).forEach(k=>delete holdings[k]);
+  Object.assign(holdings,newHoldings);
+  stocks.splice(idx,1);
+  chartVisibleIdx=new Set(stocks.map((_,i)=>i));
+  rankImpacts=rankImpacts.slice(0,stocks.length);
+  rankAssign=stocks.map((_,i)=>i);
+  if(priceChart){priceChart.destroy();priceChart=null;}
+  refreshAll();showToast(`「${name}」を削除しました`);
+}
+function refreshAll(){
+  renderClassEditor();renderEvClassSelect();renderRankAssignRows();renderRankImpactGrid();renderPresetSelects();
+  if(activeTab==='market'){renderStocks();renderBulk();}
+  else if(activeTab==='chart'){document.getElementById('chart-filter').innerHTML='';if(priceChart){priceChart.destroy();priceChart=null;}renderChart();}
+  else if(activeTab==='portfolio')renderPortfolio();
+  else if(activeTab==='ranking')renderStudentRanking();
+}
+
+function renderPresetList(){
+  const el=document.getElementById('preset-list');
+  if(!el) return;
+  if(!presets.length){el.innerHTML='<div class="empty-state" style="padding:16px">プリセットなし</div>';return;}
+  el.innerHTML=presets.map((p,i)=>`
+    <div class="preset-item">
+      <div class="preset-info">
+        <div class="preset-name">${p.name}</div>
+        <div class="preset-meta">変動率: ${p.impact>=0?'+':''}${p.impact}%</div>
+      </div>
+      <button class="preset-use-btn" onclick="usePreset(${i})">使用</button>
+      <button class="preset-del-btn" title="削除" onclick="deletePreset(${i})">×</button>
+    </div>`).join('');
+}
+function renderPresetSelects(){
+  const opts='<option value="">プリセット選択</option>'+presets.map((p,i)=>`<option value="${i}">${p.name}(${p.impact>=0?'+':''}${p.impact}%)</option>`).join('');
+  const e1=document.getElementById('ev-preset');if(e1)e1.innerHTML=opts;
+  const e2=document.getElementById('all-ev-preset');if(e2)e2.innerHTML=opts;
+}
+function addPreset(){
+  const name=document.getElementById('preset-name-input').value.trim();
+  const impact=parseInt(document.getElementById('preset-impact-input').value)||0;
+  if(!name){showToast('イベント名を入力してください');return;}
+  presets.push({name,impact});
+  document.getElementById('preset-name-input').value='';
+  document.getElementById('preset-impact-input').value='';
+  renderPresetList();renderPresetSelects();
+  saveTeacherState();
+  showToast(`プリセット「${name}」を追加しました`);
+}
+function deletePreset(idx){
+  const name=presets[idx].name;
+  presets.splice(idx,1);
+  renderPresetList();renderPresetSelects();
+  saveTeacherState();
+  showToast(`プリセット「${name}」を削除しました`);
+}
+function usePreset(idx){
+  document.getElementById('ev-name').value=presets[idx].name;
+  const imp=presets[idx].impact;
+  document.getElementById('ev-impact').value=imp;
+  document.getElementById('impact-val').textContent=(imp>=0?'+':'')+imp+'%';
+  document.getElementById('impact-val').className='impact-val '+(imp>=0?'pos':'neg');
+  showToast(`「${presets[idx].name}」を個別イベントに設定しました`);
+}
+function applyPreset(){
+  const sel=document.getElementById('ev-preset');
+  if(!sel||sel.value==='')return;
+  const p=presets[parseInt(sel.value)];
+  document.getElementById('ev-name').value=p.name;
+  document.getElementById('ev-impact').value=p.impact;
+  document.getElementById('impact-val').textContent=(p.impact>=0?'+':'')+p.impact+'%';
+  document.getElementById('impact-val').className='impact-val '+(p.impact>=0?'pos':'neg');
+  sel.value='';
+}
+function applyAllPreset(){
+  const sel=document.getElementById('all-ev-preset');
+  if(!sel||sel.value==='')return;
+  const p=presets[parseInt(sel.value)];
+  document.getElementById('all-ev-name').value=p.name;
+  sel.value='';
+}
+
+function renderEvClassSelect(){
+  const el=document.getElementById('ev-class');
+  if(!el) return;
+  el.innerHTML=stocks.map((s,i)=>`<option value="${i}">${s.name}</option>`).join('');
+}
+
+const rankEmoji=['🥇','🥈','🥉','4','5','6','7','8'];
+function rankLabel(i){return rankEmoji[i]+(i>=3?'位':'位');}
+function renderRankImpactGrid(){
+  const n=stocks.length;
+  document.getElementById('rank-impact-grid').innerHTML=Array.from({length:n},(_,i)=>`
+    <div class="rank-impact-row">
+      <span class="rank-impact-label">${rankLabel(i)}</span>
+      <input class="rank-impact-input" type="number" id="ri-${i}" value="${rankImpacts[i]??0}" step="10"
+        oninput="rankImpacts[${i}]=parseInt(this.value)||0">
+      <span style="font-size:12px;color:var(--text3)">WEN</span>
+    </div>`).join('');
+}
+function renderRankAssignRows(){
+  const n=stocks.length;
+  document.getElementById('rank-assign-rows').innerHTML=Array.from({length:n},(_,rank)=>`
+    <div class="rank-assign-row">
+      <span class="rank-assign-label">${rankLabel(rank)}</span>
+      <select class="rank-assign-select" id="ra-${rank}" onchange="rankAssign[${rank}]=parseInt(this.value)">
+        ${stocks.map((s,i)=>`<option value="${i}" ${(rankAssign[rank]??rank)===i?'selected':''}>${s.name}</option>`).join('')}
+      </select>
+    </div>`).join('');
+}
+function applyAllEvent(){
+  const evName=document.getElementById('all-ev-name').value.trim()||'全クラスイベント';
+  const n=stocks.length;
+  const assigned=Array.from({length:n},(_,i)=>parseInt(document.getElementById('ra-'+i)?.value??i));
+  const unique=new Set(assigned);
+  if(unique.size<n){showToast('各クラスに異なる順位を設定してください');return;}
+  const details=[];
+  assigned.forEach((stockIdx,rank)=>{
+    const s=stocks[stockIdx];s.prev=s.price;
+    const delta=rankImpacts[rank]??0;
+    s.price=Math.max(10,s.price+delta);
+    s.history.push({t:now2(),v:s.price});if(s.history.length>30)s.history.shift();
+    details.push(`${s.name}(${rank+1}位): ${delta>=0?'+':''}${delta} WEN`);
+  });
+  eventLog.unshift({isAllEvent:true,name:evName,details,time:now2()});
+  saveTeacherState();
+  renderEventLog();
+  if(activeTab==='chart'&&priceChart)renderChart();
+  showToast(`「${evName}」を全クラスに適用しました`);
+}
+
+function applyEvent(){
+  const classIdx=parseInt(document.getElementById('ev-class').value);
+  const impact=parseInt(document.getElementById('ev-impact').value)||0;
+  const evName=document.getElementById('ev-name').value.trim()||'イベント発生';
+  const s=stocks[classIdx];s.prev=s.price;
+  const delta=Math.round(s.price*impact/100);
+  s.price=Math.max(10,s.price+delta);
+  s.history.push({t:now2(),v:s.price});if(s.history.length>30)s.history.shift();
+  eventLog.unshift({class:s.name,name:evName,delta,time:now2()});
+  saveTeacherState();
+  renderEventLog();
+  if(activeTab==='chart'&&priceChart)renderChart();
+  showToast(`${s.name}が ${delta>=0?'+':''}${delta} WEN 変動しました`);
+}
+
+function renderEventLog(){
+  const el=document.getElementById('event-log');
+  if(!eventLog.length){el.innerHTML='<div class="empty-state">まだイベントはありません</div>';return;}
+  el.innerHTML=eventLog.slice(0,16).map(e=>{
+    if(e.isMarketEvent)return `<div class="event-item market-event"><span class="event-time">${e.time}</span><div class="event-class">システム</div><div class="event-comment">${e.comment}</div></div>`;
+    if(e.isAllEvent)return `<div class="event-item all-event"><span class="event-time">${e.time}</span><div class="event-class">全クラス一斉</div><div class="event-comment" style="font-weight:500">${e.name}</div><div class="event-delta" style="color:var(--text3);font-size:11px;margin-top:4px">${e.details.join(' / ')}</div></div>`;
+    return `<div class="event-item ${e.delta>=0?'pos-event':'neg-event'}"><span class="event-time">${e.time}</span><div class="event-class">${e.class}</div><div class="event-comment">${e.name}</div><div class="event-delta ${e.delta>=0?'up':'down'}">${e.delta>=0?'+':''}${e.delta} WEN</div></div>`;
+  }).join('');
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+rebuildChartVisible();
+renderStocks();
+renderBulk();
+
+// ===== AUTH SYSTEM =====
+let users = JSON.parse(localStorage.getItem('sm_users') || '[]');
+let currentUser = null;
+let loginRole = 'student';
+let registerRole = 'student';
+
+function saveUsers(){ localStorage.setItem('sm_users', JSON.stringify(users)); }
+
+function showLogin(){
+  document.getElementById('register-screen').classList.remove('visible');
+  document.getElementById('top-screen').classList.remove('visible');
+  document.getElementById('login-screen').classList.add('visible');
+  clearLoginErrors();
+}
+function showRegister(){
+  document.getElementById('login-screen').classList.remove('visible');
+  document.getElementById('register-screen').classList.add('visible');
+  clearRegErrors();
+  selectRegisterRole('student'); // 初期状態でクラス欄を表示・選択肢を生成
+}
+function hideAuthScreens(){
+  document.getElementById('login-screen').classList.remove('visible');
+  document.getElementById('register-screen').classList.remove('visible');
+}
+
+function selectLoginRole(r){
+  loginRole = r;
+  document.getElementById('lrc-student').classList.toggle('selected', r==='student');
+  document.getElementById('lrc-teacher').classList.toggle('selected', r==='teacher');
+}
+function selectRegisterRole(r){
+  registerRole = r;
+  document.getElementById('rrc-student').classList.toggle('selected', r==='student');
+  document.getElementById('rrc-teacher').classList.toggle('selected', r==='teacher');
+  const isTeacher = r==='teacher';
+  document.getElementById('reg-classname-wrap').style.display = isTeacher ? '' : 'none';
+  document.getElementById('reg-code-teacher-wrap').style.display = isTeacher ? '' : 'none';
+  document.getElementById('reg-code-student-wrap').style.display = isTeacher ? 'none' : '';
+  // 生徒のみ「自分のクラス」選択を表示
+  const myclassWrap = document.getElementById('reg-myclass-wrap');
+  if(myclassWrap) myclassWrap.style.display = isTeacher ? 'none' : '';
+  // 選択肢を現在のクラス一覧で生成
+  const sel = document.getElementById('reg-myclass');
+  if(sel && stocks.length){
+    sel.innerHTML = '<option value="">クラスを選択してください</option>' +
+      stocks.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  }
+}
+
+function updateTeacherCodePreview(){
+  const year = document.getElementById('reg-code-year').value.trim();
+  const cls  = document.getElementById('reg-code-class').value.trim();
+  const preview = document.getElementById('teacher-code-preview');
+  preview.textContent = (year && cls) ? year + cls : '——';
+}
+
+function clearLoginErrors(){
+  ['login-code','login-id','login-pw'].forEach(id=>{
+    document.getElementById(id).classList.remove('err');
+  });
+  ['login-code-err','login-id-err','login-pw-err'].forEach(id=>{
+    document.getElementById(id).classList.remove('visible');
+  });
+}
+function clearRegErrors(){
+  ['reg-id','reg-nickname','reg-pw','reg-pw2','reg-code-year','reg-code-class','reg-code-student','reg-classname'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('err');
+  });
+  ['reg-id-err','reg-nickname-err','reg-pw-err','reg-pw2-err','reg-code-err','reg-code-student-err','reg-classname-err'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('visible');
+  });
+}
+
+function checkPwStrength(pw){
+  let score = 0;
+  if(pw.length >= 6) score++;
+  if(pw.length >= 10) score++;
+  if(/[0-9]/.test(pw) && /[a-zA-Z]/.test(pw)) score++;
+  const labels = ['','弱い','普通','強い'];
+  const cls = ['','weak','ok','strong'];
+  for(let i=1;i<=3;i++){
+    const bar = document.getElementById('pws-'+i);
+    bar.className = 'pw-bar' + (i<=score ? ' '+cls[score] : '');
+  }
+  document.getElementById('pws-label').textContent = pw.length>0 ? labels[score] : '';
+}
+
+function doLogin(){
+  clearLoginErrors();
+  const code = document.getElementById('login-code').value.trim();
+  const id = document.getElementById('login-id').value.trim();
+  const pw = document.getElementById('login-pw').value;
+  if(!code){
+    document.getElementById('login-code').classList.add('err');
+    document.getElementById('login-code-err').textContent='クラスコードを入力してください';
+    document.getElementById('login-code-err').classList.add('visible');
+    return;
+  }
+  const cls = findClassByCode(code);
+  if(!cls){
+    document.getElementById('login-code').classList.add('err');
+    document.getElementById('login-code-err').textContent='クラスコードが見つかりません';
+    document.getElementById('login-code-err').classList.add('visible');
+    return;
+  }
+  if(!id){
+    document.getElementById('login-id').classList.add('err');
+    document.getElementById('login-id-err').textContent='IDを入力してください';
+    document.getElementById('login-id-err').classList.add('visible');
+    return;
+  }
+  const user = users.find(u=>u.id===id && u.pw===pw && u.role===loginRole && u.classId===cls.id);
+  if(!user){
+    document.getElementById('login-pw').classList.add('err');
+    document.getElementById('login-pw-err').textContent='IDまたはパスワードが違います';
+    document.getElementById('login-pw-err').classList.add('visible');
+    return;
+  }
+  currentClassId = cls.id;
+  loginSuccess(user);
+}
+
+function doRegister(){
+  clearRegErrors();
+  const isTeacher = registerRole==='teacher';
+  let code = '';
+  if(isTeacher){
+    const year  = document.getElementById('reg-code-year').value.trim();
+    const clsNo = document.getElementById('reg-code-class').value.trim();
+    code = year + clsNo;
+  } else {
+    code = document.getElementById('reg-code-student').value.trim();
+  }
+  const className = document.getElementById('reg-classname').value.trim();
+  const id = document.getElementById('reg-id').value.trim();
+  const nickname = document.getElementById('reg-nickname').value.trim();
+  const pw = document.getElementById('reg-pw').value;
+  const pw2 = document.getElementById('reg-pw2').value;
+  let ok = true;
+  let targetClass = null;
+
+  if(isTeacher){
+    const year  = document.getElementById('reg-code-year').value.trim();
+    const clsNo = document.getElementById('reg-code-class').value.trim();
+    if(!year || !clsNo){
+      document.getElementById('reg-code-year').classList.toggle('err', !year);
+      document.getElementById('reg-code-class').classList.toggle('err', !clsNo);
+      document.getElementById('reg-code-err').textContent='年度とクラス番号を両方入力してください';
+      document.getElementById('reg-code-err').classList.add('visible');
+      ok=false;
+    } else if(findClassByCode(code)){
+      document.getElementById('reg-code-year').classList.add('err');
+      document.getElementById('reg-code-class').classList.add('err');
+      document.getElementById('reg-code-err').textContent='このコードは既に使われています（'+code+'）';
+      document.getElementById('reg-code-err').classList.add('visible');
+      ok=false;
+    }
+    if(!className){
+      document.getElementById('reg-classname').classList.add('err');
+      document.getElementById('reg-classname-err').classList.add('visible');
+      ok=false;
+    }
+  } else {
+    if(!code){
+      document.getElementById('reg-code-student').classList.add('err');
+      document.getElementById('reg-code-student-err').textContent='クラスコードを入力してください';
+      document.getElementById('reg-code-student-err').classList.add('visible');
+      ok=false;
+    } else {
+      targetClass = findClassByCode(code);
+      if(!targetClass){
+        document.getElementById('reg-code-student').classList.add('err');
+        document.getElementById('reg-code-student-err').textContent='クラスコードが見つかりません。先生に確認してください';
+        document.getElementById('reg-code-student-err').classList.add('visible');
+        ok=false;
+      }
+    }
+  }
+
+  if(!id){
+    document.getElementById('reg-id').classList.add('err');
+    document.getElementById('reg-id-err').textContent='IDを入力してください';
+    document.getElementById('reg-id-err').classList.add('visible');
+    ok=false;
+  }
+  if(!nickname){
+    document.getElementById('reg-nickname').classList.add('err');
+    document.getElementById('reg-nickname-err').classList.add('visible');
+    ok=false;
+  }
+  if(pw.length<6){
+    document.getElementById('reg-pw').classList.add('err');
+    document.getElementById('reg-pw-err').classList.add('visible');
+    ok=false;
+  }
+  if(pw!==pw2){
+    document.getElementById('reg-pw2').classList.add('err');
+    document.getElementById('reg-pw2-err').classList.add('visible');
+    ok=false;
+  }
+  if(!ok) return;
+
+  if(isTeacher){
+    targetClass = {id:'cls_'+Date.now(), name:className, code:code};
+    classes.push(targetClass);
+    saveClasses();
+  }
+
+  if(users.find(u=>u.id===id && u.role===registerRole && u.classId===targetClass.id)){
+    document.getElementById('reg-id').classList.add('err');
+    document.getElementById('reg-id-err').textContent='このIDは既に使われています';
+    document.getElementById('reg-id-err').classList.add('visible');
+    return;
+  }
+
+  const newUser={id,pw,role:registerRole,classId:targetClass.id,nickname};
+  users.push(newUser);
+  saveUsers();
+  currentClassId = targetClass.id;
+  loginSuccess(newUser);
+  showToast(registerRole==='teacher'
+    ? `クラス「${targetClass.name}」を作成してログインしました`
+    : 'アカウントを作成してログインしました');
+}
+
+function loginSuccess(user){
+  currentUser = user;
+  hideAuthScreens();
+  initTeacherState();
+  if(user.role==='student') initStudentState(user.id);
+  rebuildChartVisible();
+  if(priceChart){ priceChart.destroy(); priceChart=null; }
+  document.getElementById('chart-filter').innerHTML='';
+  const displayName = user.nickname || user.id;
+  const initial = displayName.charAt(0).toUpperCase();
+  const cls = classes.find(c=>c.id===currentClassId);
+  const clsLabel = cls ? `[${cls.name}] ` : '';
+  document.getElementById('user-avatar').textContent = initial;
+  document.getElementById('user-name-disp').textContent = clsLabel + displayName + (user.role==='teacher' ? ' (先生)' : '');
+  document.getElementById('user-badge').classList.add('visible');
+  const roleWrap = document.getElementById('role-toggle-wrap');
+  if(user.role==='teacher'){
+    roleWrap.style.display='flex';
+    setRole('teacher');
+  } else {
+    roleWrap.style.display='none';
+    setRole('student');
+  }
+  document.getElementById('market-banner').classList.toggle('visible',!marketOpen);
+  document.getElementById('logo-dot').className='logo-dot'+(marketOpen?'':' closed');
+}
+
+function doLogout(){
+  saveStudentState();
+  currentUser=null;
+  currentClassId=null;
+  cash=10000; holdings={};
+  document.getElementById('user-badge').classList.remove('visible');
+  document.getElementById('role-toggle-wrap').style.display='none';
+  document.getElementById('login-id').value='';
+  document.getElementById('login-pw').value='';
+  document.getElementById('login-screen').classList.remove('visible');
+  goToTop();
+}
+
+// ===== 共有アンケートシステム =====
+// 共有ストレージ（クラスを跨いで全員が読み書きできる）
+function svUsers(){ return JSON.parse(localStorage.getItem('sm_sv_users')||'[]'); }
+function svSaveUsers(u){ localStorage.setItem('sm_sv_users', JSON.stringify(u)); }
+function svSurveys(){ return JSON.parse(localStorage.getItem('sm_sv_surveys')||'[]'); }
+function svSaveSurveys(s){ localStorage.setItem('sm_sv_surveys', JSON.stringify(s)); }
+function svRespKey(svId, uid){ return `sm_sv_resp_${svId}_${uid}`; }
+function svSaveResp(svId, myClassName, chosenOption){
+  localStorage.setItem(svRespKey(svId, svCurrentUser.id), JSON.stringify({
+    userId: svCurrentUser.id, myClassName, chosenOption, ts: new Date().toISOString()
+  }));
+}
+function svLoadMyResp(svId){
+  if(!svCurrentUser) return null;
+  try{ return JSON.parse(localStorage.getItem(svRespKey(svId, svCurrentUser.id))||'null'); }catch(e){ return null; }
+}
+function svLoadAllResp(svId){
+  const prefix = `sm_sv_resp_${svId}_`, out = [];
+  for(let i=0;i<localStorage.length;i++){
+    const k=localStorage.key(i);
+    if(k&&k.startsWith(prefix)) try{ const r=JSON.parse(localStorage.getItem(k)); if(r)out.push(r); }catch(e){}
+  }
+  return out;
+}
+function svDeleteAllResp(svId){
+  const prefix=`sm_sv_resp_${svId}_`, keys=[];
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.startsWith(prefix))keys.push(k); }
+  keys.forEach(k=>localStorage.removeItem(k));
+}
+
+// ── 画面遷移 ──
+let svCurrentUser = null;
+let svLoginRole = 'student';
+let svRegRole = 'student';
+
+function goToTop(){
+  ['top-screen','sv-login-screen','sv-register-screen'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){el.classList.remove('visible'); el.style.display='';}
+  });
+  document.getElementById('sv-main').style.display='none';
+  document.getElementById('top-screen').classList.add('visible');
+}
+function goToSurvey(){
+  document.getElementById('top-screen').classList.remove('visible');
+  svShowLogin();
+}
+function goToMarket(){
+  document.getElementById('top-screen').classList.remove('visible');
+  document.getElementById('login-screen').classList.add('visible');
+}
+function svShowLogin(){
+  ['sv-register-screen','login-screen'].forEach(id=>document.getElementById(id).classList.remove('visible'));
+  document.getElementById('sv-main').style.display='none';
+  document.getElementById('sv-login-screen').classList.add('visible');
+}
+function svShowRegister(){
+  document.getElementById('sv-login-screen').classList.remove('visible');
+  document.getElementById('sv-register-screen').classList.add('visible');
+  svSelectRegRole('student');
+}
+function svSelectLoginRole(r){
+  svLoginRole=r;
+  document.getElementById('sv-lrc-student').classList.toggle('selected',r==='student');
+  document.getElementById('sv-lrc-teacher').classList.toggle('selected',r==='teacher');
+}
+function svSelectRegRole(r){
+  svRegRole=r;
+  document.getElementById('sv-rrc-student').classList.toggle('selected',r==='student');
+  document.getElementById('sv-rrc-teacher').classList.toggle('selected',r==='teacher');
+  const wrap=document.getElementById('sv-reg-myclass-wrap');
+  if(wrap) wrap.style.display=r==='student'?'':'none';
+  const ccWrap=document.getElementById('sv-reg-classcode-wrap');
+  if(ccWrap) ccWrap.style.display=r==='student'?'':'none';
+  // クラス選択肢をDEFAULT_STOCKSから生成
+  const sel=document.getElementById('sv-reg-myclass');
+  if(sel){
+    sel.innerHTML='<option value="">クラスを選択してください</option>'+
+      DEFAULT_STOCKS.map(s=>`<option value="${s.name}">${s.name}</option>`).join('');
+  }
+}
+function svDoLogin(){
+  ['sv-login-id','sv-login-pw'].forEach(id=>document.getElementById(id).classList.remove('err'));
+  ['sv-login-id-err','sv-login-pw-err'].forEach(id=>document.getElementById(id).classList.remove('visible'));
+  const id=document.getElementById('sv-login-id').value.trim();
+  const pw=document.getElementById('sv-login-pw').value;
+  if(!id){
+    document.getElementById('sv-login-id').classList.add('err');
+    document.getElementById('sv-login-id-err').classList.add('visible');
+    return;
+  }
+  const users=svUsers();
+  const user=users.find(u=>u.id===id&&u.pw===pw&&u.role===svLoginRole);
+  if(!user){
+    document.getElementById('sv-login-pw').classList.add('err');
+    document.getElementById('sv-login-pw-err').classList.add('visible');
+    return;
+  }
+  svLoginSuccess(user);
+}
+function svDoRegister(){
+  ['sv-reg-id','sv-reg-nickname','sv-reg-pw','sv-reg-pw2','sv-reg-myclass'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove('err');
+  });
+  ['sv-reg-id-err','sv-reg-nickname-err','sv-reg-pw-err','sv-reg-pw2-err','sv-reg-myclass-err'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.classList.remove('visible');
+  });
+  const id=document.getElementById('sv-reg-id').value.trim();
+  const nickname=document.getElementById('sv-reg-nickname').value.trim();
+  const pw=document.getElementById('sv-reg-pw').value;
+  const pw2=document.getElementById('sv-reg-pw2').value;
+  const myClassName=svRegRole==='student'?document.getElementById('sv-reg-myclass').value:'';
+  const classCode=svRegRole==='student'?(document.getElementById('sv-reg-classcode')?.value.trim()||''):'';
+  let ok=true;
+  if(!id){ document.getElementById('sv-reg-id').classList.add('err'); document.getElementById('sv-reg-id-err').textContent='IDを入力してください'; document.getElementById('sv-reg-id-err').classList.add('visible'); ok=false; }
+  if(!nickname){ document.getElementById('sv-reg-nickname').classList.add('err'); document.getElementById('sv-reg-nickname-err').classList.add('visible'); ok=false; }
+  if(svRegRole==='student'&&!myClassName){ document.getElementById('sv-reg-myclass').classList.add('err'); document.getElementById('sv-reg-myclass-err').classList.add('visible'); ok=false; }
+  if(pw.length<6){ document.getElementById('sv-reg-pw').classList.add('err'); document.getElementById('sv-reg-pw-err').classList.add('visible'); ok=false; }
+  if(pw!==pw2){ document.getElementById('sv-reg-pw2').classList.add('err'); document.getElementById('sv-reg-pw2-err').classList.add('visible'); ok=false; }
+  if(!ok) return;
+  const users=svUsers();
+  if(users.find(u=>u.id===id&&u.role===svRegRole)){
+    document.getElementById('sv-reg-id').classList.add('err');
+    document.getElementById('sv-reg-id-err').textContent='このIDは既に使われています';
+    document.getElementById('sv-reg-id-err').classList.add('visible');
+    return;
+  }
+  const newUser={id,pw,role:svRegRole,nickname,myClassName,classCode};
+  users.push(newUser);
+  svSaveUsers(users);
+  svLoginSuccess(newUser);
+  showToast('アカウントを作成してログインしました');
+}
+function svLoginSuccess(user){
+  svCurrentUser=user;
+  document.getElementById('sv-login-screen').classList.remove('visible');
+  document.getElementById('sv-register-screen').classList.remove('visible');
+  document.getElementById('sv-main').style.display='block';
+  const disp=user.nickname||user.id;
+  document.getElementById('sv-user-avatar').textContent=disp.charAt(0).toUpperCase();
+  document.getElementById('sv-user-name').textContent=disp+(user.role==='teacher'?' (先生)':'')+(user.myClassName?` [${user.myClassName}]`:'');
+  if(user.role==='teacher'){
+    document.getElementById('sv-student-view').style.display='none';
+    document.getElementById('sv-teacher-view').style.display='block';
+    svRenderTeacher();
+  } else {
+    document.getElementById('sv-student-view').style.display='block';
+    document.getElementById('sv-teacher-view').style.display='none';
+    svRenderStudent();
+  }
+}
+function svDoLogout(){
+  svCurrentUser=null;
+  document.getElementById('sv-main').style.display='none';
+  goToTop();
+}
+
+// ── 生徒：回答画面 ──
+async function svRenderStudent(){
+  const el=document.getElementById('sv-student-view');
+  el.innerHTML='<div class="empty-state" style="padding:40px">読み込み中...</div>';
+  let surveys;
+  try{ surveys=await svSurveysRemote(); }catch(e){ el.innerHTML='<div class="empty-state">通信エラー</div>'; return; }
+  const active=surveys.find(s=>{
+    if(!s.active) return false;
+    const tc=s.target_codes||s.targetCodes||[];
+    if(!tc.length) return true;
+    return tc.includes(svCurrentUser.classCode||'');
+  });
+  if(!active){
+    el.innerHTML='<div class="empty-state" style="padding:40px">現在アンケートはありません<br><span style="font-size:12px;margin-top:6px;display:block">先生がアンケートを作成すると表示されます</span></div>';
+    return;
+  }
+  const myResp=await svLoadMyRespRemote(active.id);
+  const opts=active.options||[];
+  el.innerHTML=`
+    <div class="survey-card" style="max-width:600px;margin:0 auto">
+      <div style="font-size:11px;font-weight:500;letter-spacing:.06em;color:var(--text3);text-transform:uppercase;margin-bottom:8px">📋 アンケート実施中</div>
+      <div style="font-size:17px;font-weight:700;margin-bottom:4px;line-height:1.5">${active.title}</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:20px">作成: ${active.createdAt}</div>
+      ${myResp?`<div style="background:var(--green-bg);border:1.5px solid var(--green);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--green)">✅ 回答済み：<strong>${myResp.chosen_option||myResp.chosenOption}</strong> に投票しました。変更もできます。</div>`:''}
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+        ${opts.map(opt=>`
+          <label class="survey-option${myResp&&(myResp.chosenOption||myResp.chosen_option)===opt?' selected':''}">
+            <input type="radio" name="sv-opt" value="${opt}" ${myResp&&(myResp.chosenOption||myResp.chosen_option)===opt?'checked':''} style="display:none">
+            <span style="font-size:14px;font-weight:500">${opt}</span>
+          </label>`).join('')}
+      </div>
+      <button class="submit-btn" onclick="svSubmitAnswer('${active.id}','${svCurrentUser.myClassName||''}')">${myResp?'回答を変更する':'投票する'}</button>
+    </div>`;
+  el.querySelectorAll('.survey-option').forEach(opt=>{
+    opt.addEventListener('click',()=>{
+      el.querySelectorAll('.survey-option').forEach(o=>o.classList.remove('selected'));
+      opt.classList.add('selected');
+      opt.querySelector('input[type=radio]').checked=true;
+    });
+  });
+}
+async function svSubmitAnswer(surveyId, myClassName){
+  const sel=document.querySelector('input[name="sv-opt"]:checked');
+  if(!sel){ showToast('クラスを選んでください'); return; }
+  try{
+    const classCode = svCurrentUser.classCode||'';
+    await svSaveRespRemote(surveyId, myClassName, classCode, sel.value);
+    await svRenderStudent();
+    showToast('回答しました！');
+  }catch(e){ showToast('エラー: '+e.message); }
+}
+
+// ── 先生：アンケート管理画面 ──
+async function svRenderTeacher(){
+  const el=document.getElementById('sv-teacher-view');
+  const surveys=svSurveys();
+  const optionsList=DEFAULT_STOCKS.map(s=>s.name);
+  el.innerHTML=`
+    <div style="max-width:700px;margin:0 auto">
+      <div class="panel-section" style="margin-bottom:16px">
+        <div class="panel-title">アンケートを作成する</div>
+        <div class="form-group">
+          <label class="form-label">質問文（プリセットを選ぶか、直接入力してください）</label>
+          <select class="form-select" id="sv-preset-q" onchange="svApplyPresetQ()" style="margin-bottom:8px">
+            <option value="">── プリセットから選ぶ ──</option>
+            <option value="一番仲が良いクラス">一番仲が良いクラス</option>
+            <option value="授業中のリアクションや返事が一番爽やかなクラス">授業中のリアクションや返事が一番爽やかなクラス</option>
+            <option value="一番あいさつが元気なクラス">一番あいさつが元気なクラス</option>
+            <option value="どんな行事にも熱中して全力投球できるクラス">どんな行事にも熱中して全力投球できるクラス</option>
+            <option value="一番掃除が上手なクラス">一番掃除が上手なクラス</option>
+          </select>
+          <input class="form-input" type="text" id="sv-create-q" placeholder="または直接入力（例：学年で最も元気なクラスは？）">
+        </div>
+        <div class="form-group">
+          <label class="form-label">送信先クラスコード（複数はカンマ区切り、空欄で全員に送信）</label>
+          <input class="form-input" type="text" id="sv-target-codes" placeholder="例：20261,20262,20263">
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">クラスマーケットで使用しているクラスコードを入力してください</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">選択肢（回答の選択肢・クラス名）</label>
+          <div id="sv-opts-edit" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">
+            ${optionsList.map((opt,i)=>`
+              <div style="display:flex;gap:8px;align-items:center">
+                <input class="form-input sv-opt-input" type="text" value="${opt}" style="flex:1">
+                <button onclick="this.parentElement.remove()" class="del-btn">×</button>
+              </div>`).join('')}
+          </div>
+          <button onclick="svAddOptRow()" class="add-btn" style="font-size:12px">＋ 選択肢を追加</button>
+        </div>
+        <button class="submit-btn" onclick="svCreateSurvey()">作成・開始する</button>
+      </div>
+      <div id="sv-survey-list"></div>
+    </div>`;
+  svRenderSurveyList();
+}
+function svAddOptRow(){
+  const wrap=document.getElementById('sv-opts-edit');
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:8px;align-items:center';
+  row.innerHTML=`<input class="form-input sv-opt-input" type="text" placeholder="クラス名" style="flex:1"><button onclick="this.parentElement.remove()" class="del-btn">×</button>`;
+  wrap.appendChild(row);
+}
+function svApplyPresetQ(){
+  const sel=document.getElementById('sv-preset-q');
+  const inp=document.getElementById('sv-create-q');
+  if(sel&&inp&&sel.value) inp.value=sel.value;
+}
+async function svCreateSurvey(){
+  const q=document.getElementById('sv-create-q').value.trim();
+  if(!q){ showToast('質問文を入力してください'); return; }
+  const opts=[...document.querySelectorAll('.sv-opt-input')].map(el=>el.value.trim()).filter(v=>v);
+  if(opts.length<2){ showToast('選択肢を2つ以上入力してください'); return; }
+  const surveys=svSurveys();
+  const _svs=svSurveys();
+  _svs.forEach(s=>s.active=false);
+  _svs.push({ id:'sv_'+Date.now(), title:q, options:opts, active:true, createdAt:now2() });
+  svSaveSurveys(_svs);
+  showToast('アンケートを開始しました');
+  svRenderTeacher();
+}
+async function svDeleteSurvey(svId){
+  try{
+    await svDeleteSurveyRemote(svId);
+    showToast('削除しました');
+    await svRenderSurveyList();
+  }catch(e){ showToast('エラー: '+e.message); }
+}
+async function svRenderSurveyList(){
+  const el=document.getElementById('sv-survey-list');
+  if(!el) return;
+  const surveys=svSurveys();
+  const _surveys=svSurveys();
+  if(!_surveys.length){ el.innerHTML='<div class="empty-state" style="padding:20px">まだアンケートはありません</div>'; return; }
+  el.innerHTML=_surveys.map(sv=>{
+    const resps=svLoadAllResp(sv.id);
+    const total=resps.length;
+    const svOpts=sv.options||[];
+    const outside=svOpts.map(opt=>{
+      const v=resps.filter(r=>(r.chosen_option||r.chosenOption)===opt&&(r.my_class_name||r.myClassName)&&(r.my_class_name||r.myClassName)!==opt).length;
+      return {opt,v};
+    }).sort((a,b)=>b.v-a.v);
+    const maxV=Math.max(...outside.map(o=>o.v),1);
+    const tc=sv.target_codes||sv.targetCodes||[];
+    return `<div class="survey-panel-item ${sv.active?'active':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:10px">
+        <div>
+          ${sv.active?'<span style="font-size:11px;background:var(--accent);color:#fff;border-radius:4px;padding:2px 7px;font-weight:500;margin-right:6px">実施中</span>':''}
+          <span style="font-size:14px;font-weight:600">${sv.title}</span>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">回答 ${total}件 ／ 作成: ${sv.createdAt}${tc.length?` ／ 対象: ${tc.join(', ')}`:'　（全クラス）'}</div>
+        </div>
+        <button class="del-btn" onclick="svDeleteSurvey('${sv.id}')">×</button>
+      </div>
+      ${total>0?`
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">自クラス以外からの得票数</div>
+        ${outside.map(o=>`
+          <div class="result-bar-row">
+            <span style="font-size:12px;width:80px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${o.opt}</span>
+            <div class="result-bar-track"><div class="result-bar-fill" style="width:${Math.round(o.v/maxV*100)}%"></div></div>
+            <div class="result-bar-count">${o.v}票</div>
+          </div>`).join('')}
+      `:'<div style="font-size:13px;color:var(--text3)">まだ回答がありません</div>'}
+    </div>`;
+  }).join('');
+}
+
+// ── クラスマーケット先生：アンケート結果を読み込む ──
+async function loadSurveyIntoEvent(){
+  const surveys=svSurveys();
+  let _svList;
+  try{ _svList=await svSurveysRemote(); }catch(e){ showToast('通信エラー'); return; }
+  const active=_svList.find(s=>s.active)||_svList[_svList.length-1];
+  if(!active){ showToast('アンケートデータが見つかりません'); return; }
+  let resps;
+  try{ resps=await svLoadAllRespRemote(active.id); }catch(e){ showToast('通信エラー'); return; }
+  if(!resps.length){ showToast('まだ回答がありません'); return; }
+  // 各クラスの自クラス以外からの得票を計算
+  const ranked=stocks.map((s,idx)=>{
+    const votes=resps.filter(r=>(r.chosen_option||r.chosenOption)===s.name&&(r.my_class_name||r.myClassName)&&(r.my_class_name||r.myClassName)!==s.name).length;
+    return {idx,votes};
+  }).sort((a,b)=>b.votes-a.votes);
+  // rankAssignに反映
+  ranked.forEach((entry,rank)=>{
+    rankAssign[rank]=entry.idx;
+    const sel=document.getElementById('ra-'+rank);
+    if(sel) sel.value=entry.idx;
+  });
+  // イベント名にアンケートタイトルを設定
+  const nameEl=document.getElementById('all-ev-name');
+  if(nameEl) nameEl.value=`【アンケート】${active.title}`;
+  showToast(`「${active.title}」の結果を順位に反映しました`);
+}
+
+
+// ===== Supabase設定 =====
+const SUPA_URL = 'https://smtuhlaxlheosunydhlg.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNtdHVobGF4bGhlb3N1bnlkaGxnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwMTcwNjcsImV4cCI6MjEwNDU5MzA2N30.3e_MH-pH3aBtXkytS6uP1jMVr3R-5QoAh9Y9jM7XD1o';
+
+async function supaFetch(path, method='GET', body=null){
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': method==='POST' ? 'return=representation' : ''
+    }
+  };
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(SUPA_URL + '/rest/v1/' + path, opts);
+  if(!res.ok){
+    const err = await res.text();
+    throw new Error(err);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ── アンケートCRUD（Supabase版） ──
+async function svSurveysRemote(){
+  return await supaFetch('surveys?order=created_at.desc') || [];
+}
+async function svSaveSurveyRemote(survey){
+  // active=trueにする前に全てfalseに
+  await supaFetch('surveys?id=neq.' + survey.id, 'PATCH', {active: false});
+  // upsert
+  await supaFetch('surveys', 'POST', survey);
+}
+async function svSetAllInactive(){
+  await supaFetch('surveys', 'PATCH', {active: false});
+}
+async function svDeleteSurveyRemote(surveyId){
+  await supaFetch('survey_responses?survey_id=eq.' + surveyId, 'DELETE');
+  await supaFetch('surveys?id=eq.' + surveyId, 'DELETE');
+}
+
+// ── 回答CRUD（Supabase版） ──
+async function svSaveRespRemote(surveyId, myClassName, classCode, chosenOption){
+  const body = {
+    survey_id: surveyId,
+    user_id: svCurrentUser.id,
+    my_class_name: myClassName,
+    class_code: classCode,
+    chosen_option: chosenOption
+  };
+  // upsert（同一survey_id+user_idは上書き）
+  await supaFetch('survey_responses?on_conflict=survey_id,user_id', 'POST', body);
+}
+async function svLoadMyRespRemote(surveyId){
+  if(!svCurrentUser) return null;
+  const rows = await supaFetch(
+    'survey_responses?survey_id=eq.' + surveyId + '&user_id=eq.' + svCurrentUser.id
+  );
+  return rows && rows.length ? rows[0] : null;
+}
+async function svLoadAllRespRemote(surveyId){
+  return await supaFetch('survey_responses?survey_id=eq.' + surveyId) || [];
+}
+
+</script>
+</body>
+</html>
